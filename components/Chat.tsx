@@ -5,11 +5,14 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import BookingPanel from "./BookingPanel";
 import TicketCard from "./TicketCard";
+import GraphDiagram from "./GraphDiagram";
+import RunInspector, { type Trace } from "./RunInspector";
 
 type Role = "user" | "assistant";
 interface Message {
   role: Role;
   content: string;
+  trace?: Trace;
 }
 
 const WELCOME =
@@ -32,6 +35,7 @@ export default function Chat() {
   const [error, setError] = useState<string | null>(null);
   const [booking, setBooking] = useState<Record<string, unknown>>({});
   const [ticket, setTicket] = useState<Record<string, unknown> | null>(null);
+  const [openTraces, setOpenTraces] = useState<Record<number, boolean>>({});
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -81,10 +85,19 @@ export default function Chat() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? "Request failed");
 
-      setMessages((m) => [
-        ...m,
-        { role: "assistant", content: data.reply || "(no response)" },
-      ]);
+      setMessages((m) => {
+        const next: Message[] = [
+          ...m,
+          {
+            role: "assistant",
+            content: data.reply || "(no response)",
+            trace: data.trace as Trace | undefined,
+          },
+        ];
+        // auto-open the inspector for this newest reply
+        if (data.trace) setOpenTraces((o) => ({ ...o, [next.length - 1]: true }));
+        return next;
+      });
       setBooking(data.booking ?? {});
       setTicket(data.ticket ?? null);
     } catch (e) {
@@ -109,6 +122,7 @@ export default function Chat() {
     setBooking({});
     setTicket(null);
     setError(null);
+    setOpenTraces({});
   }
 
   return (
@@ -135,17 +149,36 @@ export default function Chat() {
         <section className="chat">
           <div className="messages" ref={scrollRef}>
             {messages.map((m, i) => (
-              <div key={i} className={`bubble ${m.role}`}>
-                {m.role === "assistant" ? (
-                  <div className="md">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {m.content}
-                    </ReactMarkdown>
+              <div key={i} className="msg-row">
+                <div className={`bubble ${m.role}`}>
+                  {m.role === "assistant" ? (
+                    <div className="md">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {m.content}
+                      </ReactMarkdown>
+                    </div>
+                  ) : (
+                    m.content.split("\n").map((line, j) => (
+                      <p key={j}>{line || " "}</p>
+                    ))
+                  )}
+                </div>
+
+                {m.trace && (
+                  <div className="trace-wrap">
+                    <button
+                      className="trace-toggle"
+                      onClick={() =>
+                        setOpenTraces((o) => ({ ...o, [i]: !o[i] }))
+                      }
+                    >
+                      {openTraces[i] ? "▾" : "▸"} run inspector ·{" "}
+                      {m.trace.cycles} cycle{m.trace.cycles === 1 ? "" : "s"},{" "}
+                      {m.trace.toolCalls} tool call
+                      {m.trace.toolCalls === 1 ? "" : "s"}, {m.trace.totalMs} ms
+                    </button>
+                    {openTraces[i] && <RunInspector trace={m.trace} />}
                   </div>
-                ) : (
-                  m.content.split("\n").map((line, j) => (
-                    <p key={j}>{line || " "}</p>
-                  ))
                 )}
               </div>
             ))}
@@ -193,11 +226,13 @@ export default function Chat() {
         </section>
 
         <aside className="side">
+          <GraphDiagram />
           <BookingPanel booking={booking} />
           {ticket ? <TicketCard ticket={ticket as never} /> : null}
           <p className="hint">
-            The agent fills this panel as your conversation progresses. Once every
-            required detail is set and you confirm, it issues a boarding pass.
+            Expand <b>run inspector</b> under any reply to see the exact graph
+            path, tool calls and RAG chunks (with similarity scores) for that
+            query.
           </p>
         </aside>
       </main>

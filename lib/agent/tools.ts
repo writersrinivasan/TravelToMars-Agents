@@ -2,6 +2,7 @@ import { tool } from "@langchain/core/tools";
 import { z } from "zod";
 
 import { getVectorStore } from "../rag/store";
+import { recordRetrieval } from "./trace";
 import { bookingStore, ticketStore, type BookingDraft } from "../bookings/store";
 import { quotePrice, ORIGINS } from "./pricing";
 import { checkLaunchWindows } from "./launch";
@@ -62,12 +63,24 @@ function spacecraftFor(cabinClass: string, fastTransit: boolean): string {
 /* --------------------------------- tools ---------------------------------- */
 
 export const searchKnowledgeBase = tool(
-  async ({ query }: { query: string }) => {
+  async ({ query }: { query: string }, config: unknown) => {
     const store = await getVectorStore();
-    const results = await store.similaritySearch(query, 3);
-    if (results.length === 0) return "No relevant information found in the knowledge base.";
-    return results
-      .map((doc, i) => {
+    const scored = await store.similaritySearchWithScore(query, 3);
+
+    // Record what was retrieved so the run inspector can show it.
+    recordRetrieval(threadIdFrom(config), {
+      query,
+      at: Date.now(),
+      chunks: scored.map(([doc, score]) => ({
+        title: String(doc.metadata?.title ?? "Knowledge"),
+        score,
+        snippet: doc.pageContent.replace(/\s+/g, " ").trim().slice(0, 220),
+      })),
+    });
+
+    if (scored.length === 0) return "No relevant information found in the knowledge base.";
+    return scored
+      .map(([doc], i) => {
         const text = doc.pageContent.replace(/\s+/g, " ").trim().slice(0, 480);
         return `[${i + 1}] ${doc.metadata?.title ?? "Knowledge"}: ${text}`;
       })

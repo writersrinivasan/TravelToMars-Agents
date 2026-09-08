@@ -577,3 +577,221 @@ body::before {
 .ticket-foot b {
   font-size: 18px;
 }
+
+/* ---------- run inspector + graph diagram ---------- */
+.msg-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trace-wrap {
+  align-self: flex-start;
+  max-width: 92%;
+  width: 100%;
+}
+
+.trace-toggle {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--panel-border);
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 11.5px;
+  cursor: pointer;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.trace-toggle:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.inspector {
+  margin-top: 6px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.28);
+  padding: 12px;
+  font-size: 12px;
+}
+
+.insp-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+.insp-head b {
+  color: var(--text);
+}
+.insp-model {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  padding: 2px 7px;
+  border: 1px solid var(--panel-border);
+  border-radius: 999px;
+}
+
+.timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--panel-border);
+}
+
+.tl-step {
+  position: relative;
+  padding: 0 0 12px 20px;
+}
+.tl-step:last-child {
+  padding-bottom: 0;
+}
+.tl-dot {
+  position: absolute;
+  left: 0;
+  top: 3px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-2);
+}
+.tl-step.agent .tl-dot {
+  background: var(--accent);
+}
+.tl-step.tool .tl-dot {
+  background: var(--accent-2);
+}
+.tl-step.answer .tl-dot {
+  background: var(--ok);
+}
+
+.tl-title {
+  color: var(--text);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+.tl-node {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--muted);
+}
+.tl-ms {
+  color: var(--muted);
+  font-size: 10.5px;
+  margin-left: auto;
+}
+.tl-title code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  color: var(--accent-2);
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 5px;
+}
+.chip {
+  background: rgba(124, 92, 255, 0.16);
+  border: 1px solid rgba(124, 92, 255, 0.4);
+  border-radius: 6px;
+  padding: 3px 7px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 10.5px;
+  color: var(--text);
+}
+.chip em {
+  color: var(--muted);
+  font-style: normal;
+}
+
+.rag {
+  margin-top: 7px;
+  border-left: 2px solid var(--accent-2);
+  padding-left: 9px;
+}
+.rag-q {
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.rag-q span {
+  color: var(--text);
+}
+.rag-chunk {
+  margin-bottom: 7px;
+}
+.rag-chunk-h {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.rag-title {
+  font-weight: 600;
+  color: var(--text);
+}
+.rag-score {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--accent-2);
+}
+.score-bar {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  margin: 3px 0 4px;
+  overflow: hidden;
+}
+.score-bar span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+.rag-snip {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* graph diagram card */
+.diagram svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 4px 0 8px;
+}
+.tool-legend {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 8px;
+  border: 1px dashed var(--panel-border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.tool-legend li {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+.diagram .hint code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--accent-2);
+  font-size: 11px;
+}

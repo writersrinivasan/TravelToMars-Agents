@@ -15,7 +15,7 @@ The scenario: SpaceX, Roscosmos and others are building Mars-capable spaceships 
 | ------------------ | --------------------------------------------------------------- |
 | Framework          | Next.js 14 (App Router, TypeScript)                            |
 | Agent framework    | `@langchain/langgraph` — a `StateGraph` agent ⇄ tools loop     |
-| LLM                | Groq via `@langchain/groq` (`openai/gpt-oss-20b`)         |
+| LLM                | Groq via `@langchain/groq` (`qwen/qwen3.8-27b`)         |
 | RAG                | `MemoryVectorStore` + a dependency-free hashed-embedding class |
 | State / memory     | LangGraph `MemorySaver` checkpointer, keyed by `thread_id`     |
 
@@ -33,7 +33,7 @@ Get a free Groq key at <https://console.groq.com/keys>.
 
 ```env
 GROQ_API_KEY=gsk_...
-GROQ_MODEL=openai/gpt-oss-20b   # optional; any tool-calling Groq model
+GROQ_MODEL=qwen/qwen3.8-27b   # optional; any tool-calling Groq model
 ```
 
 ---
@@ -43,15 +43,31 @@ GROQ_MODEL=openai/gpt-oss-20b   # optional; any tool-calling Groq model
 ### 1. The agent graph — `lib/agent/graph.ts`
 
 ```
-START → agent ──(tool calls?)──► tools ──► agent ──► END
+START → agent ──(tool_calls?)──► tools ──► agent ──► END
+                     │
+                     └─(tool budget spent)─► finalize ─► END
 ```
 
 - **agent** node: `ChatGroq` bound to the tools, prompted by `lib/agent/prompt.ts`.
 - **tools** node: LangGraph `ToolNode` executes whatever the model called.
-- A conditional edge loops back to `agent` while the model keeps calling tools,
-  and ends when it produces a plain answer.
+- A conditional edge (`route`) loops back to `agent` while the model keeps
+  calling tools, ends when it produces a plain answer, and after
+  `MAX_TOOL_ROUNDS` diverts to a **finalize** node (model with no tools bound)
+  so every turn is guaranteed to end in prose.
+- Only the last `HISTORY_WINDOW` messages are sent to the model (bounded tokens).
 - `MemorySaver` + a per-browser `thread_id` (stored in `localStorage`) give the
   agent conversational memory across requests.
+
+### 1b. Visualising every run — `components/GraphDiagram.tsx` + `RunInspector.tsx`
+
+- The sidebar **Agent graph** card draws the `START → agent ⇄ tools → END`
+  orchestration and lists the tools.
+- `/api/chat` runs the graph with `streamMode: "updates"`, turning each
+  super-step into a **trace** (`{ steps, cycles, toolCalls, totalMs, … }`).
+- Every assistant reply carries a **run inspector**: a timeline of
+  `agent decided → tools ran → …→ answer`, the tool-call args, per-step timing
+  and token counts, and — for `search_knowledge_base` — the RAG query with the
+  retrieved chunks and their **similarity scores**.
 
 ### 2. The tools — `lib/agent/tools.ts`
 
@@ -87,7 +103,7 @@ so the demo needs **only the Groq key**. To go fully semantic, swap that class f
 
 ## Routes
 
-- `POST /api/chat` — `{ message, threadId }` → `{ reply, threadId, booking, ticket }`
+- `POST /api/chat` — `{ message, threadId }` → `{ reply, threadId, booking, ticket, trace }`
 - `GET /api/bookings` — every confirmed booking in the current server process
 
 ---
@@ -102,9 +118,12 @@ app/
   api/bookings/route.ts    admin list
 components/
   Chat.tsx  BookingPanel.tsx  TicketCard.tsx
+  GraphDiagram.tsx         static LangGraph orchestration picture
+  RunInspector.tsx         per-query timeline: nodes, tool calls, RAG chunks
 lib/
-  agent/graph.ts           LangGraph StateGraph (agent ⇄ tools)
+  agent/graph.ts           LangGraph StateGraph (agent ⇄ tools, + finalize)
   agent/tools.ts           the 6 tools (incl. RAG + booking)
+  agent/trace.ts           per-query RAG-retrieval trace collector
   agent/prompt.ts  pricing.ts  launch.ts
   rag/store.ts  rag/embeddings.ts
   knowledge/data.ts        the RAG corpus
@@ -120,7 +139,9 @@ lib/
   checkpointer + database for production and multi-instance deploys.
 - All spacecraft, prices, launch windows and policies are **fictional** world-building.
 - The agent is instructed never to invent prices, policies or windows — they come from tools.
-- **Groq free tier** caps most models at ~8k tokens/minute, so a multi-tool turn can
-  hit HTTP 429. The client retries with back-off (`maxRetries: 6` in
-  `lib/agent/graph.ts`); for smoother demos set `GROQ_MODEL=groq/compound-mini`
-  (higher limit) or add billing to your Groq account.
+- **Model choice matters on Groq's free tier.** It caps most models at ~8k
+  tokens/minute. `qwen/qwen3.8-27b` (the default) does clean OpenAI-style tool
+  calling and rarely loops; the `openai/gpt-oss-*` models sometimes emit
+  unparseable tool output or over-search. The bounded history + `MAX_TOOL_ROUNDS`
+  finalize + `maxRetries: 6` back-off keep turns inside the limit; for headroom
+  use `GROQ_MODEL=groq/compound-mini` (70k TPM) or add billing.
