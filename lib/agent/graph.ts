@@ -19,9 +19,12 @@ const g = globalThis as unknown as { __rsvGraph?: CompiledGraph };
 function buildGraph() {
   const model = new ChatGroq({
     apiKey: process.env.GROQ_API_KEY,
-    model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
+    model: process.env.GROQ_MODEL || "openai/gpt-oss-20b",
     temperature: 0.2,
-    maxRetries: 2,
+    maxTokens: 1400,
+    // Groq's free tier has a low tokens-per-minute ceiling; it returns 429 with
+    // a short retry-after that the client honours. Give it room to back off.
+    maxRetries: 6,
   }).bindTools(tools);
 
   const toolNode = new ToolNode(tools);

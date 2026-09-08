@@ -15,7 +15,7 @@ The scenario: SpaceX, Roscosmos and others are building Mars-capable spaceships 
 | ------------------ | --------------------------------------------------------------- |
 | Framework          | Next.js 14 (App Router, TypeScript)                            |
 | Agent framework    | `@langchain/langgraph` — a `StateGraph` agent ⇄ tools loop     |
-| LLM                | Groq via `@langchain/groq` (`llama-3.3-70b-versatile`)         |
+| LLM                | Groq via `@langchain/groq` (`openai/gpt-oss-20b`)         |
 | RAG                | `MemoryVectorStore` + a dependency-free hashed-embedding class |
 | State / memory     | LangGraph `MemorySaver` checkpointer, keyed by `thread_id`     |
 
@@ -33,7 +33,7 @@ Get a free Groq key at <https://console.groq.com/keys>.
 
 ```env
 GROQ_API_KEY=gsk_...
-GROQ_MODEL=llama-3.3-70b-versatile   # optional; any tool-calling Groq model
+GROQ_MODEL=openai/gpt-oss-20b   # optional; any tool-calling Groq model
 ```
 
 ---
@@ -120,3 +120,7 @@ lib/
   checkpointer + database for production and multi-instance deploys.
 - All spacecraft, prices, launch windows and policies are **fictional** world-building.
 - The agent is instructed never to invent prices, policies or windows — they come from tools.
+- **Groq free tier** caps most models at ~8k tokens/minute, so a multi-tool turn can
+  hit HTTP 429. The client retries with back-off (`maxRetries: 6` in
+  `lib/agent/graph.ts`); for smoother demos set `GROQ_MODEL=groq/compound-mini`
+  (higher limit) or add billing to your Groq account.

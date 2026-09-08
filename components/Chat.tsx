@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import BookingPanel from "./BookingPanel";
 import TicketCard from "./TicketCard";
 
@@ -134,9 +136,17 @@ export default function Chat() {
           <div className="messages" ref={scrollRef}>
             {messages.map((m, i) => (
               <div key={i} className={`bubble ${m.role}`}>
-                {m.content.split("\n").map((line, j) => (
-                  <p key={j}>{line || " "}</p>
-                ))}
+                {m.role === "assistant" ? (
+                  <div className="md">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {m.content}
+                    </ReactMarkdown>
+                  </div>
+                ) : (
+                  m.content.split("\n").map((line, j) => (
+                    <p key={j}>{line || " "}</p>
+                  ))
+                )}
               </div>
             ))}
             {loading && (

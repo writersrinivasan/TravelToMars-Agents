@@ -64,11 +64,14 @@ function spacecraftFor(cabinClass: string, fastTransit: boolean): string {
 export const searchKnowledgeBase = tool(
   async ({ query }: { query: string }) => {
     const store = await getVectorStore();
-    const results = await store.similaritySearch(query, 5);
+    const results = await store.similaritySearch(query, 3);
     if (results.length === 0) return "No relevant information found in the knowledge base.";
     return results
-      .map((doc, i) => `[${i + 1}] ${doc.metadata?.title ?? "Knowledge"}\n${doc.pageContent}`)
-      .join("\n\n---\n\n");
+      .map((doc, i) => {
+        const text = doc.pageContent.replace(/\s+/g, " ").trim().slice(0, 480);
+        return `[${i + 1}] ${doc.metadata?.title ?? "Knowledge"}: ${text}`;
+      })
+      .join("\n\n");
   },
   {
     name: "search_knowledge_base",
@@ -82,7 +85,7 @@ export const searchKnowledgeBase = tool(
 
 export const checkLaunchWindowsTool = tool(
   async ({ departureDate }: { departureDate: string }) =>
-    JSON.stringify(checkLaunchWindows(departureDate), null, 2),
+    JSON.stringify(checkLaunchWindows(departureDate)),
   {
     name: "check_launch_windows",
     description:
@@ -99,7 +102,7 @@ export const quotePriceTool = tool(
     passengers: number;
     tripType?: "one-way" | "round-trip";
     fastTransit?: boolean;
-  }) => JSON.stringify(quotePrice(input), null, 2),
+  }) => JSON.stringify(quotePrice(input)),
   {
     name: "quote_price",
     description:
@@ -122,13 +125,13 @@ export const updateBookingDetails = tool(
     bookingStore.set(id, next);
 
     const missing = missingFields(next);
-    return [
-      "Saved. Current booking draft:",
-      JSON.stringify(next, null, 2),
-      missing.length
-        ? `Still required: ${missing.join(", ")}.`
-        : "All required details are present — summarise and ask the traveller to confirm.",
-    ].join("\n");
+    const set = Object.entries(next)
+      .filter(([k]) => k !== "status")
+      .map(([k, v]) => `${k}=${v}`)
+      .join(", ");
+    return missing.length
+      ? `Saved (${set}). Still required: ${missing.join(", ")}.`
+      : `Saved (${set}). All required details present — summarise and ask the traveller to confirm.`;
   },
   {
     name: "update_booking_details",
@@ -207,9 +210,9 @@ export const createBooking = tool(
     bookingStore.set(id, { ...draft, status: "CONFIRMED", reference, fastTransit, tripType });
 
     return [
-      "BOOKING CONFIRMED. Present this to the traveller as a boarding-pass summary,",
-      `and mention that a confirmation email is on its way to ${ticket.email}.`,
-      JSON.stringify(ticket, null, 2),
+      "BOOKING CONFIRMED. Present this as a boarding-pass summary and mention a",
+      `confirmation email is on its way to ${ticket.email}.`,
+      JSON.stringify(ticket),
     ].join("\n");
   },
   {
@@ -228,7 +231,7 @@ export const getBooking = tool(
   async ({ reference }: { reference: string }) => {
     const wanted = reference.trim().toUpperCase();
     for (const ticket of ticketStore.values()) {
-      if (ticket.reference === wanted) return JSON.stringify(ticket, null, 2);
+      if (ticket.reference === wanted) return JSON.stringify(ticket);
     }
     return `No confirmed booking found with reference ${wanted}.`;
   },
