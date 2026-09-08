@@ -1,0 +1,34 @@
+{
+  "name": "redstone-voyages",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agentic AI Mars travel booking system — Next.js + LangGraph + RAG + Groq",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@langchain/core": "^0.3.29",
+    "@langchain/groq": "^0.1.3",
+    "@langchain/langgraph": "^0.2.39",
+    "@langchain/textsplitters": "^0.1.0",
+    "langchain": "^0.3.11",
+    "next": "14.2.35",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "typescript": "^5.5.4"
+  },
+  "overrides": {
+    "@langchain/core": "^0.3.29"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}
